@@ -1,5 +1,3 @@
-name: Dependency Scanning
-
 on:
   push:
     branches:
@@ -24,10 +22,10 @@ jobs:
       security-events: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Use Node.js 20
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
@@ -41,14 +39,17 @@ jobs:
   snyk-test:
     name: Snyk test (block high/critical)
     needs: npm-audit
-    if: ${{ secrets.SNYK_TOKEN != '' }}
+    # secrets context is not available in job-level `if:` expressions.
+    # Use a repository variable (Settings → Variables) as a feature flag instead,
+    # or remove the guard and let the step skip itself when the token is absent.
+    if: ${{ vars.SNYK_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Use Node.js 20
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
@@ -66,14 +67,16 @@ jobs:
   snyk-monitor:
     name: Snyk monitor (continuous alerts)
     needs: snyk-test
-    if: ${{ github.event_name != 'pull_request' && secrets.SNYK_TOKEN != '' }}
+    # Same fix: use a repo variable for the Snyk gate;
+    # keep the `github.event_name` check as-is (that context IS allowed here).
+    if: ${{ github.event_name != 'pull_request' && vars.SNYK_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Use Node.js 20
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
